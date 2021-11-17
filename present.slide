@@ -1,0 +1,121 @@
+# Peeking into the Go compiler
+
+16 Nov 2021
+
+Ramon Rüttimann
+Platform Engineer, Nine Internet Solutions AG
+me@ramonr.ch
+github.com/tommyknows/go-meetup
+
+## $ whoami
+
+- Ramon
+- BSc in Computer Science (ZHAW, 2020)
+- Platform Engineer @ nine
+
+Disclaimer: not a compiler expert!
+
+.image me.png _ 215
+
+## context.Background()
+
+- Learning Haskell, re-wrote snippets in Go
+- no polymorphism -> different implementations of map, filter, prepend, ...
+- "is this even functional?"
+
+## The famous quicksort
+
+.code quicksort.hs
+
+.code quicksort.go /START OMIT/,/END OMIT/
+
+## Are we functional yet?
+
+Goal: add tooling to ensure a purely functional style
+
+ -> Write a code analysis tool (linter) that reports non-functional constructs
+
+ Definition of "purely functional":
+ > [...] Purely functional programming may also be defined by forbidding changing state and mutable data.
+ > Purely functional programming consists in ensuring that functions [...] will only depend on their arguments, regardless of any global or local state.
+
+ Purely functional programming - Wikipedia
+
+## How do we change state?
+
+.play -edit code/statechange/state_change.go /START OMIT/,/END OMIT/
+
+## Our linter needs to...
+
+- Find all (re)assignments
+- Needs an exception for recursive function literals
+- Report (some) `for`- and `range-loops` explicitly
+- Report increment and decrement (`x++` / `x--`) explicitly
+
+## How to find reassignments
+
+Operator is not a good indicator for this
+
+## Abstract Syntax Trees (AST)
+
+.image ast.png 550 _
+
+## How to find reassignments
+
+Operator is not a good indicator for this
+
+Utilise the AST position information:
+
+.code assignment.go
+.code assignment_ast
+(some nodes omitted)
+
+## The famous quicksort
+
+.play -edit code/quicksort/main.go /START OMIT/,/END OMIT/
+
+## fmap, filter, prepend, fold, ...
+
+- Reimplementing the same functions again and again
+- `interface{}` wouldn't make it easier
+- No generics / type parameters
+- But `append`, `delete` and `make` are generic as well (and type-checked)
+- ...add new builtin functions!
+
+.code code/fmap/fmap.go
+
+## How does the Go compiler (gc) work
+
+1. Parsing Go programs
+1. Type-checking and AST-transformation
+1. AST to SSA (Single Static Assignment) conversion
+1. Generating machine code
+
+## Type-Checking and AST-transformation
+
+- Type-check the AST, name resolution & type inference
+- Check for `declared and not used` variables
+- AST-transformation based on newly gained type information, for example string
+  additions split from arithmetic additions
+- Dead-Code elimination, function call inlining, escape analysis
+- Rewrite builtin function calls
+
+## AST Nodes
+
+.code code/node/node.go
+
+## Implementing new builtins
+
+## Wrapping up
+
+- This is how you implement generic functions without generics
+- ...but please use generics now 😉
+- Functional Go has helped me understand Haskell and the Go compiler
+- New builtin functions & functional linter providing a nice(r) framework
+
+## Closing remarks
+
+- (Purely) functional Go is NOT - and should not be - effective Go
+- Performance of this is probably bad
+
+## Questions?
